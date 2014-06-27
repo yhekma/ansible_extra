@@ -5,15 +5,52 @@ import os
 import subprocess
 import tempfile
 
+DOCUMENTATION = '''
+---
+module: db2
+short_description: execute db2 commands on databases
+description:
+  - Executes db2 commands on databases. When "dbname" is passed, the command is executed after connecting to the database as the instance user.
+  - If not, no connection is made but then command is still executed as the instanceuser. The output is returned if no outputfile is given.
 
-def jsonify(db2_output):
-    tempdict = {}
-    for line in db2_output:
-        print line
-        if '=' in line:
-            tempdict[line.split('=')[0].strip()] = ''.join(line.split('=')[1:]).strip()
-    return json.dumps(tempdict)
+author: Yoram Hekma
+requirements:
+  - python > 2.6
 
+options:
+  instance:
+    description:
+      - The name of the instance in which to execute the given commands.
+    required: true
+    default: null
+  command:
+    description:
+      - The command to execute
+    required: true
+    default: null
+  outputfile:
+    description:
+      - Name of the file to save the output of the command to in json format. If the file exists and resides in /tmp it is overwritten. Else the
+      - action fails. If no outputfile is given, the output is returned to ansible.
+    required: false
+    default: null
+  dbname:
+    description:
+      - Name of the database to connect to prior to executing the command. If no database is given, the command is executed without first connecting
+      - to the database. In both cases to command is executed as "instanceuser" if it is given or "instance" if not.
+    required: false
+    default: null
+  instanceuser:
+    description:
+      - The owner of the instance. The command will get executed as this (OS) user.
+    required: false
+    default: The passed "instance"
+'''
+
+EXAMPLES = '''
+- action: db2 instance=my_instance command='db2 list db directory' outputfile=/tmp/output.txt
+- action: db2 instance=my_instance dbname=my_cool_db command='db2 get db cfg'
+'''
 
 def write_to_output(outputfile, output):
     if outputfile and os.path.exists(outputfile) and not outputfile.startswith('/tmp'):
@@ -23,15 +60,15 @@ def write_to_output(outputfile, output):
     elif outputfile:
         # Outputfile is not false (so it has been passed)
         f = open(outputfile, 'w')
-        f.write(jsonify(output))
+        f.write(json.dumps(output))
         f.close()
     else:
         # Outputfile is false, so we should just return the string
-        return output
+        return json.dumps(output)
 
 
-def instance_command(instance, command, outputfile):
-    command = 'sudo -iu %s %s' % (instance, command)
+def instance_command(instance, instanceuser, command, outputfile):
+    command = 'sudo -iu %s %s' % (instanceuser, command)
     popen_output = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = [line.strip() for line in popen_output.stdout.readlines()]
     exit_status = popen_output.wait()
@@ -44,7 +81,7 @@ def instance_command(instance, command, outputfile):
     return res_args
 
 
-def database_command(instance, dbname, command, outputfile):
+def database_command(instance, instanceuser, dbname, command, outputfile):
     tmpfile = tempfile.mkstemp()
     tmpfilehandle = open(tmpfile[1], 'w')
     tmpfilehandle.write("db2 connect to %s\n" % dbname)
@@ -52,7 +89,7 @@ def database_command(instance, dbname, command, outputfile):
     tmpfilehandle.close()
     os.close(tmpfile[0])
     os.chmod(tmpfile[1], 0755)
-    command = 'sudo -iu %s %s' % (instance, tmpfile[1])
+    command = 'sudo -iu %s %s' % (instanceuser, tmpfile[1])
     popen_output = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = [line.strip() for line in popen_output.stdout.readlines()]
     exit_status = popen_output.wait()
@@ -73,6 +110,7 @@ def main():
             command = dict(required=True),
             outputfile = dict(required=False),
             dbname = dict(required=False),
+            instanceuser = dict(required=False, default=False)
         )
     )
 
@@ -80,12 +118,16 @@ def main():
     command = module.params['command']
     outputfile = module.params['outputfile']
     dbname = module.params['dbname']
+    instanceuser = module.params['instanceuser']
+
+    if not instanceuser:
+        instanceuser = instance
 
     if dbname and not dbname.lower() == "all":
-        res_args = database_command(instance, dbname, command, outputfile)
+        res_args = database_command(instance, instanceuser, dbname, command, outputfile)
 
     if not dbname:
-        res_args = instance_command(instance, command, outputfile)
+        res_args = instance_command(instance, instanceuser, command, outputfile)
 
     module.exit_json(**res_args)
 

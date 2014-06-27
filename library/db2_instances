@@ -1,5 +1,35 @@
 #!/usr/bin/python
 
+DOCUMENTATION = '''
+---
+module: db2_instances
+short_description: Makes all db2 instances available as ansible facts for later use.
+description:
+  - Makes all db2 instances available as ansible facts for later use. All the db2 installations are used, provided they
+  - reside in the same base directory (see "db2dir" and "db2dirprefix").
+
+author: Yoram Hekma
+requirements:
+  - python > 2.6
+
+options:
+  db2dir:
+    description:
+      - Path in which db2 is installed.
+    required: false
+    default: /opt/IBM/db2
+  db2dirprefix:
+    description:
+      - String with which the db2 dirs must start. Useful when the "db2dir" not only contains db2 installations.
+    required: false
+    default: "V*"
+'''
+
+EXAMPLES = '''
+- action: db2_instances
+- action: db2_instances db2dir=/opt/custom_db2_install db2dirprefix="Version*"
+'''
+
 from fnmatch import fnmatch
 import os
 import subprocess
@@ -8,7 +38,7 @@ import subprocess
 def main():
     module = AnsibleModule(
         argument_spec = dict(
-            db2dir = dict(required=True),
+            db2dir = dict(required=False, default="/opt/IBM/db2"),
             db2prefix = dict(required=False, default='V*'),
         )
     )
