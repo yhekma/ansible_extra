@@ -1,0 +1,94 @@
+#!/usr/bin/python
+
+import json
+import os
+import subprocess
+import tempfile
+
+
+def jsonify(db2_output):
+    tempdict = {}
+    for line in db2_output:
+        print line
+        if '=' in line:
+            tempdict[line.split('=')[0].strip()] = ''.join(line.split('=')[1:]).strip()
+    return json.dumps(tempdict)
+
+
+def write_to_output(outputfile, output):
+    if outputfile and os.path.exists(outputfile) and not outputfile.startswith('/tmp'):
+        # Outputfile is not False (so it has been passed), already exists *and*
+        # does not start with "/tmp", exit to avoid overwriting scary files
+        module.fail_json(msg="outputfile %s already exists and does not reside in /tmp" % outputfile)
+    elif outputfile:
+        # Outputfile is not false (so it has been passed)
+        f = open(outputfile, 'w')
+        f.write(jsonify(output))
+        f.close()
+    else:
+        # Outputfile is false, so we should just return the string
+        return output
+
+
+def instance_command(instance, command, outputfile):
+    command = 'sudo -iu %s %s' % (instance, command)
+    popen_output = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output = [line.strip() for line in popen_output.stdout.readlines()]
+    exit_status = popen_output.wait()
+
+    res_args = {
+        'output': write_to_output(outputfile, output),
+        'rc': exit_status,
+        'changed': True,
+    }
+    return res_args
+
+
+def database_command(instance, dbname, command, outputfile):
+    tmpfile = tempfile.mkstemp()
+    tmpfilehandle = open(tmpfile[1], 'w')
+    tmpfilehandle.write("db2 connect to %s\n" % dbname)
+    tmpfilehandle.write(command)
+    tmpfilehandle.close()
+    os.close(tmpfile[0])
+    os.chmod(tmpfile[1], 0755)
+    command = 'sudo -iu %s %s' % (instance, tmpfile[1])
+    popen_output = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output = [line.strip() for line in popen_output.stdout.readlines()]
+    exit_status = popen_output.wait()
+    os.remove(tmpfile[1])
+
+    res_args = {
+        'output': write_to_output(outputfile, output),
+        'rc': exit_status,
+        'changed': True,
+    }
+    return res_args
+
+
+def main():
+    module = AnsibleModule(
+        argument_spec = dict(
+            instance = dict(required=True),
+            command = dict(required=True),
+            outputfile = dict(required=False),
+            dbname = dict(required=False),
+        )
+    )
+
+    instance = module.params['instance']
+    command = module.params['command']
+    outputfile = module.params['outputfile']
+    dbname = module.params['dbname']
+
+    if dbname and not dbname.lower() == "all":
+        res_args = database_command(instance, dbname, command, outputfile)
+
+    if not dbname:
+        res_args = instance_command(instance, command, outputfile)
+
+    module.exit_json(**res_args)
+
+
+from ansible.module_utils.basic import * # NOQA
+main()

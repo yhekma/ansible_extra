@@ -1,0 +1,39 @@
+#!/usr/bin/python
+
+from fnmatch import fnmatch
+import os
+import subprocess
+
+
+def main():
+    module = AnsibleModule(
+        argument_spec = dict(
+            db2dir = dict(required=True),
+            db2prefix = dict(required=False, default='V*'),
+        )
+    )
+
+    db2dir = module.params['db2dir']
+    db2prefix = module.params['db2prefix']
+    db2dirlist = []
+
+    for I in os.listdir(db2dir):
+        if fnmatch(I, db2prefix):
+            d = os.path.join(db2dir, I)
+            db2dirlist.append(d)
+
+    res_args = {}
+
+    for db2 in db2dirlist:
+        popen_output = subprocess.Popen('%s/instance/db2ilist' % db2, stdout=subprocess.PIPE)
+        instancelist =  [l.strip() for l in popen_output.stdout.readlines()]
+        try:
+            res_args['ansible_facts']['db2instances'] = instancelist
+        except KeyError:
+            res_args['ansible_facts'] = {'db2instances': instancelist}
+
+    module.exit_json(**res_args)
+
+
+from ansible.module_utils.basic import * # NOQA
+main()
