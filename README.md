@@ -14,3 +14,12 @@ library = ./library:/usr/share/ansible
 ```
 
 assuming the rest of your modules reside in /usr/share/ansible.
+
+To check the available options, you can use the provided ***ansible-doc*** program:
+
+```
+ansible-doc db2
+```
+```
+ansible-doc db2_instances
+```
