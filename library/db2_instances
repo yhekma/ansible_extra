@@ -32,7 +32,6 @@ EXAMPLES = '''
 
 from fnmatch import fnmatch
 import os
-import subprocess
 
 
 def main():
@@ -55,12 +54,12 @@ def main():
     res_args = {}
 
     for db2 in db2dirlist:
-        popen_output = subprocess.Popen('%s/instance/db2ilist' % db2, stdout=subprocess.PIPE)
-        instancelist =  [l.strip() for l in popen_output.stdout.readlines()]
+        rc, out, err = module.run_command("%s/instance/db2ilist" % db2)
+        #instancelist =  [l.strip() for l in out]
         try:
-            res_args['ansible_facts']['db2instances'] = instancelist
+            res_args['ansible_facts']['db2instances'] = out.splitlines()
         except KeyError:
-            res_args['ansible_facts'] = {'db2instances': instancelist}
+            res_args['ansible_facts'] = {'db2instances': out.splitlines()}
 
     module.exit_json(**res_args)
 

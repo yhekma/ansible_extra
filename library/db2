@@ -2,7 +2,6 @@
 
 import json
 import os
-import subprocess
 import tempfile
 
 DOCUMENTATION = '''
@@ -60,28 +59,26 @@ def write_to_output(outputfile, output):
     elif outputfile:
         # Outputfile is not false (so it has been passed)
         f = open(outputfile, 'w')
-        f.write(json.dumps(output))
+        f.write(output)
         f.close()
     else:
         # Outputfile is false, so we should just return the string
-        return json.dumps(output)
+        return output
 
 
-def instance_command(instance, instanceuser, command, outputfile):
+def instance_command(m, instance, instanceuser, command, outputfile):
     command = 'sudo -iu %s %s' % (instanceuser, command)
-    popen_output = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    output = [line.strip() for line in popen_output.stdout.readlines()]
-    exit_status = popen_output.wait()
+    rc, out, err = m.run_command(command)
 
     res_args = {
-        'output': write_to_output(outputfile, output),
-        'rc': exit_status,
+        'stdout': write_to_output(outputfile, out),
+        'stderr': err,
         'changed': True,
     }
     return res_args
 
 
-def database_command(instance, instanceuser, dbname, command, outputfile):
+def database_command(m, instance, instanceuser, dbname, command, outputfile):
     tmpfile = tempfile.mkstemp()
     tmpfilehandle = open(tmpfile[1], 'w')
     tmpfilehandle.write("db2 connect to %s\n" % dbname)
@@ -90,14 +87,12 @@ def database_command(instance, instanceuser, dbname, command, outputfile):
     os.close(tmpfile[0])
     os.chmod(tmpfile[1], 0755)
     command = 'sudo -iu %s %s' % (instanceuser, tmpfile[1])
-    popen_output = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    output = [line.strip() for line in popen_output.stdout.readlines()]
-    exit_status = popen_output.wait()
+    rc, out, err = m.run_command(command)
     os.remove(tmpfile[1])
 
     res_args = {
-        'output': write_to_output(outputfile, output),
-        'rc': exit_status,
+        'stdout': write_to_output(outputfile, out),
+        'stderr': err,
         'changed': True,
     }
     return res_args
@@ -124,10 +119,10 @@ def main():
         instanceuser = instance
 
     if dbname and not dbname.lower() == "all":
-        res_args = database_command(instance, instanceuser, dbname, command, outputfile)
+        res_args = database_command(module, instance, instanceuser, dbname, command, outputfile)
 
     if not dbname:
-        res_args = instance_command(instance, instanceuser, command, outputfile)
+        res_args = instance_command(module, instance, instanceuser, command, outputfile)
 
     module.exit_json(**res_args)
 
