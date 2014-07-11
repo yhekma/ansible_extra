@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import json
 import os
 import tempfile
 
@@ -100,12 +99,12 @@ def database_command(m, instance, instanceuser, dbname, command, outputfile):
 
 def main():
     module = AnsibleModule(
-        argument_spec = dict(
-            instance = dict(required=True),
-            command = dict(required=True),
-            outputfile = dict(required=False),
-            dbname = dict(required=False),
-            instanceuser = dict(required=False, default=False)
+        argument_spec=dict(
+            instance=dict(required=True),
+            command=dict(required=True),
+            outputfile=dict(required=False),
+            dbname=dict(required=False),
+            instanceuser=dict(required=False, default=False)
         )
     )
 
