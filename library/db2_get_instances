@@ -55,6 +55,7 @@ def main():
 
     for db2 in db2dirlist:
         rc, out, err = module.run_command("%s/instance/db2ilist" % db2)
+        #instancelist =  [l.strip() for l in out]
         try:
             res_args['ansible_facts']['db2instances'] = out.splitlines()
         except KeyError:

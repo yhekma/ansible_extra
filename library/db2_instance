@@ -1,0 +1,88 @@
+#!/usr/bin/python
+
+DOCUMENTATION = '''
+---
+module: db2_instance
+short_description: Creates a db2 instance
+description:
+  - Creates a db2 instance.
+
+author: Yoram Hekma
+requirements:
+  - python > 2.6
+
+options:
+  name:
+    description:
+      - The name of the instance to be modified/created
+    required: true
+    default: null
+  db2path:
+    description:
+      - The path to db2 (ie. /opt/IBM/db2/V97)
+    required: true
+    default: null
+  user:
+    description:
+      - The instance user to be used (must be present on system). By default this is the same as the instancename
+    required: false
+    default: name
+  port:
+    description:
+      - Network port to be used
+    required: true
+    default: null
+  security:
+    description:
+      - Type of security to be used
+    required: false
+    default: ese
+  fenceuser:
+    description:
+      - User to be used for fencing. Must be present on system.
+    required: true
+    default: null
+'''
+
+EXAMPLES = '''
+- action: db2_instance name=wasdb db2path=/opt/IBM/db2/V97 port=9090 fencuser=wasdb_fence
+'''
+
+
+def main():
+    module = AnsibleModule(
+        argument_spec=dict(
+            name=dict(required=True),
+            db2path=dict(required=True),
+            user=dict(required=False),
+            port=dict(required=True),
+            security=dict(required=False, default="ese"),
+            fenceuser=dict(required=True),
+        )
+    )
+
+    name = module.params['name']
+    db2path = module.params['db2path']
+    user = module.params['user']
+    port = module.params['port']
+    security = module.params['security']
+    fenceuser = module.params['fenceuser']
+    
+    if not user:
+        user = name
+
+    command = "%s/instance/db2icrt -a SERVER_ENCRYPT -p %s -s %s -u %s %s" % (db2path, port, security, fenceuser, user)
+    rc, out, err = module.run_command(command)
+
+    res_args = {
+        'stdout': out,
+        'stderr': err,
+        'rc': rc,
+        'changed': True,
+    }
+
+    module.exit_json(**res_args)
+
+
+from ansible.module_utils.basic import * # NOQA
+main()
