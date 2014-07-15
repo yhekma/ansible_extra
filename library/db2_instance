@@ -30,7 +30,7 @@ options:
   port:
     description:
       - Network port to be used
-    required: true
+    required: false
     default: null
   security:
     description:
@@ -54,7 +54,7 @@ def main():
         argument_spec=dict(
             name=dict(required=True),
             db2path=dict(required=True),
-            port=dict(required=True),
+            port=dict(required=False, default=""),
             security=dict(required=False, default="ese"),
             fenceuser=dict(required=True),
             ensure=dict(required=False, default="present"),
@@ -63,15 +63,20 @@ def main():
 
     name = module.params['name']
     db2path = module.params['db2path']
-    port = module.params['port']
+    portnum = module.params['port']
     security = module.params['security']
     fenceuser = module.params['fenceuser']
     ensure = module.params['ensure']
+
+    if portnum:
+        port = "-p %s" % portnum
+    else:
+        port = portnum
     
     if ensure == "absent":
         command = "%s/instance/db2idrop %s" % (db2path, name)
     else:
-        command = "%s/instance/db2icrt -a SERVER_ENCRYPT -p %s -s %s -u %s %s" % (db2path, port, security, fenceuser, name)
+        command = "%s/instance/db2icrt -a SERVER_ENCRYPT %s -s %s -u %s %s" % (db2path, port, security, fenceuser, name)
     rc, out, err = module.run_command(command)
 
     if not rc == 0:
