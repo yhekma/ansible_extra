@@ -40,7 +40,8 @@ options:
   fenceuser:
     description:
       - User to be used for fencing. Must be present on system.
-    required: true
+    required: false
+    default: same as instancename
     default: null
 '''
 
@@ -56,7 +57,7 @@ def main():
             db2path=dict(required=True),
             port=dict(required=False, default=""),
             security=dict(required=False, default="ese"),
-            fenceuser=dict(required=True),
+            fenceuser=dict(required=False, default=False),
             ensure=dict(required=False, default="present"),
         )
     )
@@ -72,6 +73,9 @@ def main():
         port = "-p %s" % portnum
     else:
         port = portnum
+
+    if not fenceuser:
+        fenceuser = name
     
     if ensure == "absent":
         command = "%s/instance/db2idrop %s" % (db2path, name)
