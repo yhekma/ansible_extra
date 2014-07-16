@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+import pwd
+
 DOCUMENTATION = '''
 ---
 module: db2_instance
@@ -17,7 +19,7 @@ options:
       - The name of the instance to be modified/created
     required: true
     default: null
-  ensure:
+  state:
     description:
       - Whether the instance should be created or removed
     required: null
@@ -49,6 +51,13 @@ EXAMPLES = '''
 - action: db2_instance name=wasdb db2path=/opt/IBM/db2/V97 port=9090 fencuser=wasdb_fence
 '''
 
+def get_homedir(username):
+    for pw_entry in pwd.getpwall():
+        if pw_entry.pw_name == username:
+            return pw_entry.pw_dir
+
+    module.fail_json("Could not find homedir of %s" % username)
+
 
 def main():
     module = AnsibleModule(
@@ -58,7 +67,7 @@ def main():
             port=dict(required=False, default=""),
             security=dict(required=False, default="ese"),
             fenceuser=dict(required=False, default=False),
-            ensure=dict(required=False, default="present"),
+            state=dict(required=False, default="present"),
         )
     )
 
@@ -67,7 +76,8 @@ def main():
     portnum = module.params['port']
     security = module.params['security']
     fenceuser = module.params['fenceuser']
-    ensure = module.params['ensure']
+    state = module.params['state']
+    homedir = get_homedir(name)
 
     if portnum:
         port = "-p %s" % portnum
@@ -77,10 +87,19 @@ def main():
     if not fenceuser:
         fenceuser = name
     
-    if ensure == "absent":
-        command = "%s/instance/db2idrop %s" % (db2path, name)
+    if state == "absent":
+        if os.path.exists('%s/sqllib' % homedir):
+            command = "%s/instance/db2idrop %s" % (db2path, name)
+        else:
+            res_args = {'changed': False}
+            module.exit_json(**res_args)
     else:
-        command = "%s/instance/db2icrt -a SERVER_ENCRYPT %s -s %s -u %s %s" % (db2path, port, security, fenceuser, name)
+        if os.path.exists('%s/sqllib' % homedir):
+            res_args = {'changed': False}
+            module.exit_json(**res_args)
+        else:
+            command = "%s/instance/db2icrt -a SERVER_ENCRYPT %s -s %s -u %s %s" % (db2path, port, security, fenceuser, name)
+
     rc, out, err = module.run_command(command)
 
     if not rc == 0:

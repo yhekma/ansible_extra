@@ -1,0 +1,9 @@
+---
+- hosts: '{{env}}'
+  tasks:
+
+    - name: create instance group
+      group: name=dbgroup1
+
+    - name: create instance user
+      user: name=dbuser1 group=dbgroup1
