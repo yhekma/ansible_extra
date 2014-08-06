@@ -36,9 +36,9 @@ import os
 
 def main():
     module = AnsibleModule(
-        argument_spec = dict(
-            db2dir = dict(required=False, default="/opt/IBM/db2"),
-            db2prefix = dict(required=False, default='V*'),
+        argument_spec=dict(
+            db2dir=dict(required=False, default="/opt/IBM/db2"),
+            db2prefix=dict(required=False, default='V*'),
         )
     )
 
@@ -46,16 +46,19 @@ def main():
     db2prefix = module.params['db2prefix']
     db2dirlist = []
 
-    for I in os.listdir(db2dir):
-        if fnmatch(I, db2prefix):
-            d = os.path.join(db2dir, I)
-            db2dirlist.append(d)
+    try:
+        for I in os.listdir(db2dir):
+            if fnmatch(I, db2prefix):
+                d = os.path.join(db2dir, I)
+                db2dirlist.append(d)
+    except OSError:
+        module.fail_json(msg="Error getting contents of db2dir (%s)." % db2dir)
 
     res_args = {}
 
     for db2 in db2dirlist:
         rc, out, err = module.run_command("%s/instance/db2ilist" % db2)
-        #instancelist =  [l.strip() for l in out]
+
         try:
             res_args['ansible_facts']['db2instances'] = out.splitlines()
         except KeyError:
