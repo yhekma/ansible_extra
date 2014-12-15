@@ -24,39 +24,44 @@ To check the available options, you can use the provided ***ansible-doc*** progr
 
   Executes db2 commands on databases. When "dbname" is passed, the
   command is executed after connecting to the database as the instance
-  user.If not, no connection is made but then command is still
+  user. If not, no connection is made but then command is still
   executed as the instanceuser. The output is returned if no
   outputfile is given.
 
 Options (= is mandatory):
 
 = command
-        The command to execute
+        The command to execute [Default: None]
 
 - dbname
         Name of the database to connect to prior to executing the
         command. If no database is given, the command is executed
-        without first connectingto the database. In both cases to
+        without first connecting to the database. In both cases to
         command is executed as "instanceuser" if it is given or
-        "instance" if not.
+        "instance" if not. [Default: None]
 
 = instance
         The name of the instance in which to execute the given
-        commands.
+        commands. [Default: None]
 
 - instanceuser
         The owner of the instance. The command will get executed as
-        this (OS) user.
+        this (OS) user. [Default: The passed "instance"]
+
+- output_format
+        Format to use with outputfile. Currently text or json
+        [Default: text]
 
 - outputfile
         Name of the file to save the output of the command to in json
         format. If the file exists and resides in /tmp it is
-        overwritten. Else theaction fails. If no outputfile is given,
-        the output is returned to ansible.
+        overwritten. Else the action fails. If no outputfile is given,
+        the output is returned to ansible. [Default: None]
 
 Requirements:  python > 2.6
 
 - action: db2 instance=my_instance command='db2 list db directory' outputfile=/tmp/output.txt
+- action: db2 instance=my_instance command='db2 list db directory' outputfile=/tmp/output.txt output_format=json
 - action: db2 instance=my_instance dbname=my_cool_db command='db2 get db cfg'
 ```
 
