@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import os
+import json
 import tempfile
 
 DOCUMENTATION = '''
@@ -32,6 +33,11 @@ options:
       - action fails. If no outputfile is given, the output is returned to ansible.
     required: false
     default: null
+  output_format:
+    description:
+      - Format to use with outputfile. Currently text or json
+    required: false
+    default: text
   dbname:
     description:
       - Name of the database to connect to prior to executing the command. If no database is given, the command is executed without first connecting
@@ -47,10 +53,11 @@ options:
 
 EXAMPLES = '''
 - action: db2 instance=my_instance command='db2 list db directory' outputfile=/tmp/output.txt
+- action: db2 instance=my_instance command='db2 list db directory' outputfile=/tmp/output.txt output_format=json
 - action: db2 instance=my_instance dbname=my_cool_db command='db2 get db cfg'
 '''
 
-def write_to_output(outputfile, output):
+def write_to_output(outputfile, output, output_format=False):
     if outputfile and os.path.exists(outputfile) and not outputfile.startswith('/tmp'):
         # Outputfile is not False (so it has been passed), already exists *and*
         # does not start with "/tmp", exit to avoid overwriting scary files
@@ -58,26 +65,33 @@ def write_to_output(outputfile, output):
     elif outputfile:
         # Outputfile is not false (so it has been passed)
         f = open(outputfile, 'w')
-        f.write(output)
+        if output_format:
+            output_list = [l.strip() for l in output.split('\n')]
+            while "" in output_list:
+                output_list.remove("")
+
+            json.dump(output_list, f)
+        else:
+            f.write(output)
         f.close()
     else:
         # Outputfile is false, so we should just return the string
         return output
 
 
-def instance_command(m, instance, instanceuser, command, outputfile):
+def instance_command(m, instance, instanceuser, command, outputfile, output_format):
     command = 'sudo -iu %s %s' % (instanceuser, command)
     rc, out, err = m.run_command(command)
 
     res_args = {
-        'stdout': write_to_output(outputfile, out),
+        'stdout': write_to_output(outputfile, out, output_format),
         'stderr': err,
         'changed': True,
     }
     return res_args
 
 
-def database_command(m, instance, instanceuser, dbname, command, outputfile):
+def database_command(m, instance, instanceuser, dbname, command, outputfile, output_format):
     tmpfile = tempfile.mkstemp()
     tmpfilehandle = open(tmpfile[1], 'w')
     tmpfilehandle.write("db2 connect to %s\n" % dbname)
@@ -90,7 +104,7 @@ def database_command(m, instance, instanceuser, dbname, command, outputfile):
     os.remove(tmpfile[1])
 
     res_args = {
-        'stdout': write_to_output(outputfile, out),
+        'stdout': write_to_output(outputfile, out, output_format),
         'stderr': err,
         'changed': True,
     }
@@ -104,11 +118,13 @@ def main():
             command=dict(required=True),
             outputfile=dict(required=False),
             dbname=dict(required=False),
-            instanceuser=dict(required=False, default=False)
+            instanceuser=dict(required=False, default=False),
+            output_format=dict(required=False),
         )
     )
 
     instance = module.params['instance']
+    output_format = module.params['output_format']
     command = module.params['command']
     outputfile = module.params['outputfile']
     dbname = module.params['dbname']
@@ -118,10 +134,10 @@ def main():
         instanceuser = instance
 
     if dbname and not dbname.lower() == "all":
-        res_args = database_command(module, instance, instanceuser, dbname, command, outputfile)
+        res_args = database_command(module, instance, instanceuser, dbname, command, outputfile, output_format)
 
     if not dbname:
-        res_args = instance_command(module, instance, instanceuser, command, outputfile)
+        res_args = instance_command(module, instance, instanceuser, command, outputfile, output_format)
 
     module.exit_json(**res_args)
 

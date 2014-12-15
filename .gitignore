@@ -54,3 +54,5 @@ docs/_build/
 
 ### Sync from prod
 sync.sh
+
+*.swp
