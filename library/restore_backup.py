@@ -3,6 +3,7 @@
 import os
 import re
 import json
+import shutil
 
 DOCUMENTATION = '''
 ---
@@ -18,11 +19,19 @@ options:
     description:
       - The name of the file that needs to be restored.
     required: true
+  backup:
+    description:
+      - Create a backup file including the timestamp information so you can get
+        the original file back if you somehow clobbered it incorrectly.
+    required: false
+    choices: ["yes", "no"]
+    default: "no"
 '''
 
 EXAMPLES = '''
   - action: restore_backup dest=/etc/samba/smb.conf
 '''
+
 
 def restore_backup(dest):
     dirpath = os.path.dirname(dest)
@@ -31,7 +40,7 @@ def restore_backup(dest):
 
     for f in os.listdir(dirpath):
         # This will match: "<filename>.2015-05-26@11:50:47~" for instance
-        if re.match('^%s\.\d{4}(:?-\d\d){2}@(:?\d\d:){2}\d\d~' % filename, f):
+        if re.match('^%s\.\d{4}(:?-\d\d){2}@(:?\d\d:){2}\d\d~$' % filename, f):
             mtime = os.stat(os.path.join(dirpath, f)).st_mtime
             file_dict[str(mtime)] = f
 
@@ -62,13 +71,33 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             dest=dict(required=True),
+            backup=dict(default=False, type='bool'),
         )
     )
 
     dest = module.params['dest']
-    res_args = restore_backup(dest)
+
+    if module.params['backup']:
+        ext = time.strftime("%Y-%m-%d@%H:%M:%S~", time.localtime(time.time()))
+        backup_dest = "%s.%s-tmp" % (dest, ext)
+        try:
+            shutil.copy2(dest, backup_dest)
+        except (shutil.Error, IOError), e:
+            module.fail_json(msg='Could not make backup of %s to %s: %s' % (dest, backup_dest, e))
+
+        res_args = restore_backup(dest)
+
+        try:
+            os.rename(backup_dest, '%s.%s' % (dest, ext))
+        except Exception, e:
+            module.fail_json(msg='Could not rename %s to %s.%s: %s' % (backup_dest, dest, ext, e))
+
+    else:
+        res_args = restore_backup(dest)
+
     module.exit_json(**res_args)
 
 
 from ansible.module_utils.basic import *
+
 main()
