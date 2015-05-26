@@ -56,3 +56,6 @@ docs/_build/
 sync.sh
 
 *.swp
+Vagrantfile
+playbook.yml
+ansible_inventory
