@@ -27,6 +27,11 @@ To check the available options, you can use the provided ***ansible-doc*** progr
 
 Options (= is mandatory):
 
+- backup
+        Create a backup file including the timestamp information so
+        you can get the original file back if you somehow clobbered it
+        incorrectly. (Choices: yes, no) [Default: no]
+
 = dest
         The name of the file that needs to be restored.
 
