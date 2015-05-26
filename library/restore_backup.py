@@ -45,7 +45,7 @@ def restore_backup(dest):
             'stderr': 'No backup found',
         }
 
-    backup_path = os.join(dirpath, latest_backup)
+    backup_path = os.path.join(dirpath, latest_backup)
 
     try:
         os.rename(backup_path, dest)
