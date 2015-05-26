@@ -1,7 +1,7 @@
-ansible_db2
+ansible_extra
 ===========
 
-db2 modules for use with Ansible
+various modules for use with Ansible
 
 # Installation/usage
 
@@ -16,6 +16,25 @@ library = ./library:/usr/share/ansible
 assuming the rest of your modules reside in /usr/share/ansible.
 
 To check the available options, you can use the provided ***ansible-doc*** program.
+
+## restore_backup
+
+```
+> RESTORE_BACKUP
+
+  looks for a backup file in the same dir as the file to be restored
+  and renames it to the original.
+
+Options (= is mandatory):
+
+= dest
+        The name of the file that needs to be restored.
+
+Requirements:  python > 2.6
+
+EXAMPLES:
+  - action: restore_backup dest=/etc/samba/smb.conf
+```
 
 ## db2
 
