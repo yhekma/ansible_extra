@@ -70,7 +70,7 @@ def restore_backup(module, dest, version, original=None):
     for f in os.listdir(dirpath):
         # This will match: "<filename>.2015-05-26@11:50:47~" for instance
         try:
-            if f == os.path.basename(original):
+            if original and f == os.path.basename(original):
                 continue
             timestring = re.match(time_regexp, f).group(1)
             mtime = time.strptime(timestring, '%Y-%m-%d@%H:%M:%S~')
