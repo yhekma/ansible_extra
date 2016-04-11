@@ -87,6 +87,7 @@ Requirements:  python > 2.6
 - action: db2 instance=my_instance command='db2 list db directory' outputfile=/tmp/output.txt
 - action: db2 instance=my_instance command='db2 list db directory' outputfile=/tmp/output.txt output_format=json
 - action: db2 instance=my_instance dbname=my_cool_db command='db2 get db cfg'
+- action: db2 instance=my_instance dbname=my_cool_db command="db2 attach to my_instance ; db2 get dbm cfg show detail ; db2 detach" outputfile=/tmp/output.txt
 ```
 
 ## db2_instances

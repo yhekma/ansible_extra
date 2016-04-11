@@ -57,6 +57,7 @@ EXAMPLES = '''
 - action: db2 instance=my_instance dbname=my_cool_db command='db2 get db cfg'
 '''
 
+
 def write_to_output(outputfile, output, output_format=False):
     if outputfile and os.path.exists(outputfile) and not outputfile.startswith('/tmp'):
         # Outputfile is not False (so it has been passed), already exists *and*
@@ -64,16 +65,12 @@ def write_to_output(outputfile, output, output_format=False):
         module.fail_json(msg="outputfile %s already exists and does not reside in /tmp" % outputfile)
     elif outputfile:
         # Outputfile is not false (so it has been passed)
-        f = open(outputfile, 'w')
-        if output_format:
-            output_list = [l.strip() for l in output.split('\n')]
-            while "" in output_list:
-                output_list.remove("")
-
-            json.dump(output_list, f)
-        else:
-            f.write(output)
-        f.close()
+        with open(outputfile, 'w') as f:
+            if output_format:
+                # display the output in json - stdout 'unformatted' way; to format, use .splitlines()
+                json.dump(output, f)
+            else:
+                f.write(output)
     else:
         # Outputfile is false, so we should just return the string
         return output
@@ -84,9 +81,10 @@ def instance_command(m, instance, instanceuser, command, outputfile, output_form
     rc, out, err = m.run_command(command)
 
     res_args = {
-        'stdout': write_to_output(outputfile, out, output_format),
+        'stdout': out,
         'stderr': err,
         'changed': True,
+        'write_to_output': write_to_output(outputfile, out, output_format),
     }
     return res_args
 
@@ -104,9 +102,10 @@ def database_command(m, instance, instanceuser, dbname, command, outputfile, out
     os.remove(tmpfile[1])
 
     res_args = {
-        'stdout': write_to_output(outputfile, out, output_format),
+        'stdout': out,
         'stderr': err,
         'changed': True,
+        'write_to_output': write_to_output(outputfile, out, output_format),
     }
     return res_args
 
