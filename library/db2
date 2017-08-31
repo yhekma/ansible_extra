@@ -143,7 +143,7 @@ def main():
             command=dict(required=True),
             outputfile=dict(required=False),
             dbname=dict(required=False),
-            instanceuser=dict(required=False, default=False),
+            instanceuser=dict(required=False),
             output_format=dict(required=False),
         )
     )
