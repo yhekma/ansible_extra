@@ -117,7 +117,7 @@ def database_command(m, instance, instanceuser, dbname, command, outputfile, out
     tmpfilehandle.write(command)
     tmpfilehandle.close()
     os.close(tmpfile[0])
-    os.chmod(tmpfile[1], 0755)
+    os.chmod(tmpfile[1],  0o755)
 
     if which('sudo'):
         command = 'sudo -iu %s %s' % (instanceuser, tmpfile[1])
